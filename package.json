@@ -6,7 +6,7 @@
   "version": "0.0.0-unversioned",
   "main": "index.js",
   "scripts": {
-    "build": "{ [ -n \"$npm_package_gitHead\" -a ! -e .git ] && sed -i s/-unversioned/-git-${npm_package_gitHead}/ package.json; } && tsc -t ES2015 -m commonjs --alwaysStrict --strictNullChecks --noImplicitAny --noImplicitReturns --noImplicitThis --noUnusedLocals *.ts",
+    "build": "{ [ -n \"$npm_package_gitHead\" -a ! -e .git ] && sed -i s/-unversioned/-git-${npm_package_gitHead}/ package.json; }; tsc -t ES2015 -m commonjs --alwaysStrict --strictNullChecks --noImplicitAny --noImplicitReturns --noImplicitThis --noUnusedLocals *.ts",
     "preinstall": "npm run build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
