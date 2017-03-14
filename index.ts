@@ -254,3 +254,55 @@ export function withTimeout(parentCtx: IContext, timeout: number /* ms */): [ICo
 export function withCancel(parentCtx: IContext): [IContext, () => void] {
   return withDeadline(parentCtx, null);
 }
+
+/* Promise Utilities
+ * -----------------
+ */
+
+// Returns a promise that will be rejected with ctx.error when ctx expires. The
+// promise is never resolved and may never be rejected.
+export function expiryPromise(ctx: IContext): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    ctx.doneHandler(() => {
+      reject(ctx.error);
+    });
+  });
+}
+
+// Can be used to abort functions which don't support contexts or other means
+// of cancellation. The function f initiates the process and returns a promise;
+// but if ctx expires before the promise is resolved, the promise returned by
+// this function is rejected and any future resolution of that promise is
+// ignored. If ctx is already expired, an already-rejected promise is returned
+// and f is not called.
+//
+// If cleanupFunc is non-null, it is called with the resolved value of the
+// promise returned by f iff it resolves after the context expires (and thus
+// never becomes the resolved value of the promise returned by this function).
+// This function can be used to cleanup non-memory resources created by the
+// process initiated by a call to f, in the event that they complete after the
+// context expires.
+export function raceContext<T>(ctx: IContext, f: () => Promise<T>, cleanupFunc: ((x: T) => void) | null=null): Promise<T> {
+  if (ctx.error !== null)
+    return Promise.reject(ctx.error);
+
+  let aborted = false;
+
+  return new Promise<T>((resolve, reject) => {
+    f()
+      .then(x => {
+        if (aborted && cleanupFunc)
+          cleanupFunc(x);
+
+        resolve(x);
+      }, reject);
+
+    expiryPromise(ctx)
+      .catch(e => {
+        aborted = true;
+        reject(e);
+      });
+  });
+
+  //return Promise.race([expiryPromise(ctx), p]);
+}
